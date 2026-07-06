@@ -293,3 +293,16 @@ Added:
 - User and SSO APIs
 - Tests
 - Documentation + ADR
+
+## Milestone 18: Azure AD / Google Workspace SSO Providers
+
+Added:
+
+- Generic OIDC provider
+- Azure AD / Entra ID provider
+- Google Workspace provider
+- SSO provider factory
+- Generic provider callback endpoint
+- SSO environment variables
+- Provider tests
+- Documentation + ADR

@@ -93,3 +93,7 @@
 ## 0.17.0
 
 - Added enterprise SSO and persistent user management scaffolding.
+
+## 0.18.0
+
+- Added Azure AD and Google Workspace SSO provider scaffolding.

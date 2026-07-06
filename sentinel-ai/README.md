@@ -167,3 +167,17 @@ Added:
 - Investigation API scaffold
 - Tests
 - Documentation + ADR
+
+## Milestone 9: AI Investigator / Evidence Narrative Engine
+
+Added:
+
+- AI provider abstraction
+- Mock AI provider
+- OpenAI provider scaffold
+- Investigation prompt builder
+- Narrative parser
+- Investigation narrative service
+- AI API scaffold
+- AI tests
+- Documentation + ADR

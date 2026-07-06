@@ -54,3 +54,8 @@
 
 - Added Investigation Case Management.
 - Added case lifecycle, priority mapping, case service, comments, evidence links, API scaffold, tests, documentation, and ADR.
+
+## 0.9.0
+
+- Added AI Investigator / Evidence Narrative Engine.
+- Added provider abstraction, mock provider, prompt builder, narrative parser, service, API scaffold, tests, documentation, and ADR.

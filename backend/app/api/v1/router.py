@@ -8,6 +8,13 @@ from app.api.v1.auth.routes import router as auth_router
 from app.api.v1.connectors.routes import router as connectors_router
 from app.api.v1.health.routes import router as health_router
 from app.api.v1.scans.routes import router as scans_router
+from app.anomaly.api.persistence_routes import router as anomaly_persistence_router
+
+api_v1_router.include_router(
+    anomaly_persistence_router,
+    prefix="/anomaly-persistence",
+    tags=["Anomaly Persistence"],
+)
 
 api_v1_router = APIRouter()
 api_v1_router.include_router(health_router, prefix="/health", tags=["Health"])

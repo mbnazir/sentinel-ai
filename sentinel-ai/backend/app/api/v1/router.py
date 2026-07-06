@@ -1,4 +1,5 @@
 from fastapi import APIRouter
+from app.connectors.quartz.api.routes import router as quartz_connector_router
 from app.users.api.routes import router as users_router
 from app.sso.api.routes import router as sso_router
 from app.security.api.routes import router as security_router
@@ -45,3 +46,5 @@ api_v1_router.include_router(security_router, prefix="/security", tags=["Securit
 
 api_v1_router.include_router(users_router, prefix="/users", tags=["Users"])
 api_v1_router.include_router(sso_router, prefix="/sso", tags=["SSO"])
+
+api_v1_router.include_router(quartz_connector_router, prefix="/connectors/quartz", tags=["Quartz Connector"])

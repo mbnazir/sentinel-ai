@@ -97,3 +97,7 @@
 ## 0.18.0
 
 - Added Azure AD and Google Workspace SSO provider scaffolding.
+
+## 0.19.0
+
+- Added production-shaped Quartz API connector and ingestion service.

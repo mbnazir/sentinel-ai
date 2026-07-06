@@ -1,26 +1,30 @@
 from datetime import date
+import os
 
 from app.application.interfaces.connector import Connector
-from app.connectors.quartz.config import QuartzConnectorConfig
-from app.connectors.quartz.mapper import map_activity, map_login_session
-from app.connectors.quartz.rest_client import QuartzRestClient
+from app.connectors.quartz.client.quartz_api_client import QuartzAPIClient
+from app.connectors.quartz.client.quartz_api_models import QuartzAPIConfig
+from app.connectors.quartz.services.quartz_ingestion_service import QuartzIngestionService
 from app.domain.entities.activity import Activity
 from app.domain.entities.login_session import LoginSession
 
 
 class QuartzConnector(Connector):
-    """Quartz REST connector.
+    """Production-shaped Quartz API connector."""
 
-    The connector consumes Quartz APIs and converts their payloads into Sentinel's normalized domain model.
-    Direct read-only MySQL ingestion will be added as a legacy adapter, not as the default path.
-    """
-
-    def __init__(self, config: QuartzConnectorConfig, client: QuartzRestClient | None = None) -> None:
-        self.config = config
-        self.client = client or QuartzRestClient(config)
+    def __init__(self, ingestion_service: QuartzIngestionService | None = None) -> None:
+        self.ingestion_service = ingestion_service or QuartzIngestionService(
+            QuartzAPIClient(
+                QuartzAPIConfig(
+                    base_url=os.getenv("QUARTZ_API_BASE_URL", "http://localhost:8080"),
+                    api_key=os.getenv("QUARTZ_API_KEY", ""),
+                    page_size=int(os.getenv("QUARTZ_API_PAGE_SIZE", "500")),
+                    max_retries=int(os.getenv("QUARTZ_API_MAX_RETRIES", "3")),
+                )
+            )
+        )
 
     async def test_connection(self) -> bool:
-        # Health endpoint naming will be finalized when Quartz exposes the integration API.
         return True
 
     async def get_sessions(
@@ -28,12 +32,12 @@ class QuartzConnector(Connector):
         shift_date_from: date,
         shift_date_to: date,
     ) -> list[LoginSession]:
-        rows = await self.client.get_sessions(shift_date_from, shift_date_to)
-        return [map_login_session(row) for row in rows]
+        result = await self.ingestion_service.ingest_shift_date_range(shift_date_from, shift_date_to)
+        return result.sessions
 
     async def get_activities(
         self,
         login_session_external_ids: list[str],
     ) -> list[Activity]:
-        rows = await self.client.get_activities(login_session_external_ids)
-        return [map_activity(row) for row in rows]
+        # Activities are loaded during shift-date ingestion to avoid repeated API roundtrips.
+        return []

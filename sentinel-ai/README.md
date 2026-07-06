@@ -306,3 +306,17 @@ Added:
 - SSO environment variables
 - Provider tests
 - Documentation + ADR
+
+## Milestone 19: Connector Ingestion Hardening + Quartz API Production Connector
+
+Added:
+
+- Quartz API client
+- Pagination and retry-aware request wrapper
+- Quartz DTO mapper
+- Normalized mapper
+- Shift-date range ingestion service
+- Quartz sync API
+- Connector env variables
+- Tests
+- Documentation + ADR

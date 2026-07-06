@@ -1,0 +1,46 @@
+# Changelog
+
+## 0.1.0
+
+- Initial project foundation.
+
+
+## 0.2.0
+
+- Added normalized workforce data store.
+- Added Quartz connector configuration and REST client scaffold.
+- Added ingestion service for shift-date ranges.
+- Added connector synchronization API.
+- Added import summary DTOs and tests.
+
+
+## 0.2.0
+
+- Added normalized workforce data store.
+- Added Quartz connector configuration and REST client scaffold.
+- Added ingestion service for shift-date ranges.
+- Added connector synchronization API.
+- Added import summary DTOs and tests.
+
+## 0.3.0
+
+- Added Timeline Reconstruction Engine.
+- Added activity snapshots, timeline segments, source comparisons, and tests.
+- Added timeline API scaffold and documentation.
+
+## 0.4.0
+
+- Added Activity Matching Engine.
+- Added confidence scoring and source comparison classifications.
+- Added matching service, API scaffold, tests, documentation, and ADR.
+
+## 0.5.0
+
+- Added deterministic Rule Engine.
+- Added first activity-level and session-level integrity rules.
+- Added evidence model, severity model, rule API scaffold, tests, documentation, and ADR.
+
+## 0.6.0
+
+- Added Risk Scoring Engine.
+- Added risk bands, weighted scoring, duplicate dampening, escalation logic, API scaffold, tests, documentation, and ADR.

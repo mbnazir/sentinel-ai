@@ -320,3 +320,16 @@ Added:
 - Connector env variables
 - Tests
 - Documentation + ADR
+
+## Milestone 20: Persist Normalized Quartz Ingestion
+
+Added:
+
+- Normalized login session store
+- Normalized activity store
+- Alembic migration
+- Idempotent normalized ingestion repository
+- Persisted Quartz ingestion service
+- Quartz sync API now persists data
+- Tests
+- Documentation + ADR

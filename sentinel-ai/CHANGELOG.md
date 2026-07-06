@@ -101,3 +101,7 @@
 ## 0.19.0
 
 - Added production-shaped Quartz API connector and ingestion service.
+
+## 0.20.0
+
+- Added persistence for normalized Quartz ingestion.

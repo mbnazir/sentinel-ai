@@ -277,3 +277,19 @@ Added:
 - Investigation workflow audit events
 - Tests
 - Documentation + ADR
+
+## Milestone 17: Enterprise SSO + Persistent User Management
+
+Added:
+
+- Persistent Sentinel user model
+- User migration
+- User repository
+- Local user creation and login
+- SSO provider abstraction
+- Mock SSO provider
+- SSO role mapper
+- SSO auth service
+- User and SSO APIs
+- Tests
+- Documentation + ADR

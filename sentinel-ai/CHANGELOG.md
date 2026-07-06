@@ -89,3 +89,7 @@
 ## 0.16.0
 
 - Added route-level permission enforcement and persistent audit logging scaffolding.
+
+## 0.17.0
+
+- Added enterprise SSO and persistent user management scaffolding.

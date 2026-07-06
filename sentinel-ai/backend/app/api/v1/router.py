@@ -1,4 +1,6 @@
 from fastapi import APIRouter
+from app.users.api.routes import router as users_router
+from app.sso.api.routes import router as sso_router
 from app.security.api.routes import router as security_router
 from app.dashboard.api.routes import router as executive_dashboard_router
 from app.workflows.api.routes import router as workflow_router
@@ -40,3 +42,6 @@ api_v1_router.include_router(workflow_router, prefix="/workflow", tags=["Workflo
 api_v1_router.include_router(executive_dashboard_router, prefix="/dashboard", tags=["Executive Dashboard"])
 
 api_v1_router.include_router(security_router, prefix="/security", tags=["Security"])
+
+api_v1_router.include_router(users_router, prefix="/users", tags=["Users"])
+api_v1_router.include_router(sso_router, prefix="/sso", tags=["SSO"])

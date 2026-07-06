@@ -105,3 +105,7 @@
 ## 0.20.0
 
 - Added persistence for normalized Quartz ingestion.
+
+## 0.21.0
+
+- Added automated scan pipeline from normalized data.

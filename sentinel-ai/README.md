@@ -333,3 +333,15 @@ Added:
 - Quartz sync API now persists data
 - Tests
 - Documentation + ADR
+
+## Milestone 21: Automated Scan Pipeline from Normalized Data
+
+Added:
+
+- Scan domain models
+- Normalized scan repository
+- Normalized activity mapper
+- End-to-end scan pipeline service
+- Scan API endpoint
+- Tests
+- Documentation + ADR

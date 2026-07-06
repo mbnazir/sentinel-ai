@@ -222,3 +222,17 @@ Added:
 - Risk-colored activity blocks
 - Case detail integration
 - Visualization documentation + ADR
+
+## Milestone 13: Backend-backed Timeline Retrieval API
+
+Added:
+
+- Normalized timeline activity persistence model
+- Timeline migration
+- Timeline activity repository
+- Timeline API mapper
+- Repository-backed timeline endpoint
+- Frontend timeline API client
+- Dashboard timeline loading with fallback
+- Tests
+- Documentation + ADR

@@ -1,18 +1,20 @@
 import { useEffect, useState } from "react";
 import { ShieldCheck } from "lucide-react";
-import { fetchInvestigationCases, generateNarrative } from "./api/client";
+import { fetchInvestigationCases, generateNarrative, fetchTimelineVisualization } from "./api/client";
 import { CaseDetail } from "./components/CaseDetail";
 import { DashboardSummary } from "./components/DashboardSummary";
 import { InvestigationQueue } from "./components/InvestigationQueue";
 import { mockCases } from "./mockData";
 import { mockTimelineByCase } from "./mockTimelineData";
 import type { InvestigationCase, InvestigationNarrative } from "./types";
+import type { TimelineVisualizationData } from "./timelineTypes";
 import "./styles.css";
 
 export default function App() {
   const [cases, setCases] = useState<InvestigationCase[]>(mockCases);
   const [selectedCase, setSelectedCase] = useState<InvestigationCase | null>(mockCases[0]);
   const [narrative, setNarrative] = useState<InvestigationNarrative | null>(null);
+  const [timelineData, setTimelineData] = useState<TimelineVisualizationData | null>(mockTimelineByCase[mockCases[0].case_id] ?? null);
   const [apiStatus, setApiStatus] = useState("demo data");
 
   useEffect(() => {
@@ -28,6 +30,15 @@ export default function App() {
         setApiStatus("demo data");
       });
   }, []);
+
+  const loadTimeline = async (item: InvestigationCase) => {
+    try {
+      const data = await fetchTimelineVisualization(item.entity_id);
+      setTimelineData(data.lanes.length > 0 ? data : mockTimelineByCase[item.case_id] ?? null);
+    } catch {
+      setTimelineData(mockTimelineByCase[item.case_id] ?? null);
+    }
+  };
 
   const handleGenerateNarrative = async () => {
     if (!selectedCase) return;
@@ -69,13 +80,14 @@ export default function App() {
           onSelect={(item) => {
             setSelectedCase(item);
             setNarrative(null);
+            void loadTimeline(item);
           }}
         />
         <CaseDetail
           selectedCase={selectedCase}
           narrative={narrative}
           onGenerateNarrative={handleGenerateNarrative}
-          timelineData={selectedCase ? mockTimelineByCase[selectedCase.case_id] ?? null : null}
+          timelineData={timelineData}
         />
       </div>
     </main>

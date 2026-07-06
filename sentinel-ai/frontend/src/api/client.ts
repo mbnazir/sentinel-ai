@@ -1,5 +1,6 @@
 import axios from "axios";
 import type { ApiResponse, InvestigationCase, InvestigationNarrative } from "../types";
+import type { TimelineVisualizationData } from "../timelineTypes";
 
 const client = axios.create({
   baseURL: "/api/v1/workflow",
@@ -39,5 +40,16 @@ export async function addInvestigationComment(
 
 export async function generateNarrative(caseId: string): Promise<InvestigationNarrative> {
   const response = await client.post<ApiResponse<InvestigationNarrative>>(`/investigations/${caseId}/narrative`);
+  return response.data.data;
+}
+
+
+const timelineClient = axios.create({
+  baseURL: "/api/v1/timelines",
+  timeout: 30000
+});
+
+export async function fetchTimelineVisualization(loginSessionExternalId: string): Promise<TimelineVisualizationData> {
+  const response = await timelineClient.get<ApiResponse<TimelineVisualizationData>>(`/${loginSessionExternalId}`);
   return response.data.data;
 }

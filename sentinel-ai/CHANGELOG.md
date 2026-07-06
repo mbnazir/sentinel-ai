@@ -73,3 +73,7 @@
 
 - Added Timeline / Evidence Visualization UI.
 - Added source lanes, activity blocks, timeline findings, demo evidence, documentation, and ADR.
+
+## 0.13.0
+
+- Added backend-backed timeline retrieval API and frontend wiring.

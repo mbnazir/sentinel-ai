@@ -1,0 +1,105 @@
+import { useEffect, useState } from "react";
+import { ShieldCheck } from "lucide-react";
+import { fetchInvestigationCases, generateNarrative, fetchTimelineVisualization, fetchExecutiveDashboard } from "./api/client";
+import { CaseDetail } from "./components/CaseDetail";
+import { DashboardSummary } from "./components/DashboardSummary";
+import { InvestigationQueue } from "./components/InvestigationQueue";
+import { mockCases } from "./mockData";
+import { mockTimelineByCase } from "./mockTimelineData";
+import { mockExecutiveDashboard } from "./mockExecutiveDashboard";
+import { ExecutiveAnalytics } from "./components/ExecutiveAnalytics";
+import type { ExecutiveDashboardSummary } from "./dashboardTypes";
+import type { InvestigationCase, InvestigationNarrative } from "./types";
+import type { TimelineVisualizationData } from "./timelineTypes";
+import "./styles.css";
+
+export default function App() {
+  const [cases, setCases] = useState<InvestigationCase[]>(mockCases);
+  const [selectedCase, setSelectedCase] = useState<InvestigationCase | null>(mockCases[0]);
+  const [narrative, setNarrative] = useState<InvestigationNarrative | null>(null);
+  const [timelineData, setTimelineData] = useState<TimelineVisualizationData | null>(mockTimelineByCase[mockCases[0].case_id] ?? null);
+  const [apiStatus, setApiStatus] = useState("demo data");
+  const [executiveSummary, setExecutiveSummary] = useState<ExecutiveDashboardSummary>(mockExecutiveDashboard);
+
+  useEffect(() => {
+    fetchExecutiveDashboard()
+      .then(setExecutiveSummary)
+      .catch(() => setExecutiveSummary(mockExecutiveDashboard));
+
+    fetchInvestigationCases()
+      .then((items) => {
+        if (items.length > 0) {
+          setCases(items);
+          setSelectedCase(items[0]);
+          setApiStatus("live API");
+        }
+      })
+      .catch(() => {
+        setApiStatus("demo data");
+      });
+  }, []);
+
+  const loadTimeline = async (item: InvestigationCase) => {
+    try {
+      const data = await fetchTimelineVisualization(item.entity_id);
+      setTimelineData(data.lanes.length > 0 ? data : mockTimelineByCase[item.case_id] ?? null);
+    } catch {
+      setTimelineData(mockTimelineByCase[item.case_id] ?? null);
+    }
+  };
+
+  const handleGenerateNarrative = async () => {
+    if (!selectedCase) return;
+
+    try {
+      const generated = await generateNarrative(selectedCase.case_id);
+      setNarrative(generated);
+    } catch {
+      setNarrative({
+        case_id: selectedCase.case_id,
+        executive_summary: "Demo narrative generated locally because the workflow API is unavailable.",
+        key_findings: selectedCase.evidence_links.map((item) => item.summary),
+        evidence_summary: selectedCase.evidence_links.map((item) => `${item.source}: ${item.summary}`),
+        recommended_next_steps: ["Review source activities.", "Validate operational exceptions.", "Document final decision."],
+        limitations: ["This fallback narrative is based only on loaded case data."]
+      });
+    }
+  };
+
+  return (
+    <main className="app-shell">
+      <header>
+        <div className="brand">
+          <ShieldCheck size={28} />
+          <div>
+            <h1>Sentinel AI</h1>
+            <p>Enterprise Workforce Integrity Platform</p>
+          </div>
+        </div>
+        <span className="api-status">Source: {apiStatus}</span>
+      </header>
+
+      <DashboardSummary cases={cases} />
+
+      <ExecutiveAnalytics data={executiveSummary} />
+
+      <div className="content-grid">
+        <InvestigationQueue
+          cases={cases}
+          selectedCaseId={selectedCase?.case_id ?? null}
+          onSelect={(item) => {
+            setSelectedCase(item);
+            setNarrative(null);
+            void loadTimeline(item);
+          }}
+        />
+        <CaseDetail
+          selectedCase={selectedCase}
+          narrative={narrative}
+          onGenerateNarrative={handleGenerateNarrative}
+          timelineData={timelineData}
+        />
+      </div>
+    </main>
+  );
+}

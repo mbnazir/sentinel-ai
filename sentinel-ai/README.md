@@ -236,3 +236,16 @@ Added:
 - Dashboard timeline loading with fallback
 - Tests
 - Documentation + ADR
+
+## Milestone 14: Executive Analytics Dashboard
+
+Added:
+
+- Executive dashboard backend summary service
+- Executive dashboard API
+- Risk distribution, trend, and top entity models
+- Frontend executive analytics panel
+- ECharts risk distribution and trend charts
+- Demo fallback analytics
+- Tests
+- Documentation + ADR

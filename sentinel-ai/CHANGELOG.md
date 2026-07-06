@@ -77,3 +77,7 @@
 ## 0.13.0
 
 - Added backend-backed timeline retrieval API and frontend wiring.
+
+## 0.14.0
+
+- Added Executive Analytics Dashboard.

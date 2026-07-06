@@ -1,11 +1,14 @@
 import { useEffect, useState } from "react";
 import { ShieldCheck } from "lucide-react";
-import { fetchInvestigationCases, generateNarrative, fetchTimelineVisualization } from "./api/client";
+import { fetchInvestigationCases, generateNarrative, fetchTimelineVisualization, fetchExecutiveDashboard } from "./api/client";
 import { CaseDetail } from "./components/CaseDetail";
 import { DashboardSummary } from "./components/DashboardSummary";
 import { InvestigationQueue } from "./components/InvestigationQueue";
 import { mockCases } from "./mockData";
 import { mockTimelineByCase } from "./mockTimelineData";
+import { mockExecutiveDashboard } from "./mockExecutiveDashboard";
+import { ExecutiveAnalytics } from "./components/ExecutiveAnalytics";
+import type { ExecutiveDashboardSummary } from "./dashboardTypes";
 import type { InvestigationCase, InvestigationNarrative } from "./types";
 import type { TimelineVisualizationData } from "./timelineTypes";
 import "./styles.css";
@@ -16,8 +19,13 @@ export default function App() {
   const [narrative, setNarrative] = useState<InvestigationNarrative | null>(null);
   const [timelineData, setTimelineData] = useState<TimelineVisualizationData | null>(mockTimelineByCase[mockCases[0].case_id] ?? null);
   const [apiStatus, setApiStatus] = useState("demo data");
+  const [executiveSummary, setExecutiveSummary] = useState<ExecutiveDashboardSummary>(mockExecutiveDashboard);
 
   useEffect(() => {
+    fetchExecutiveDashboard()
+      .then(setExecutiveSummary)
+      .catch(() => setExecutiveSummary(mockExecutiveDashboard));
+
     fetchInvestigationCases()
       .then((items) => {
         if (items.length > 0) {
@@ -72,6 +80,8 @@ export default function App() {
       </header>
 
       <DashboardSummary cases={cases} />
+
+      <ExecutiveAnalytics data={executiveSummary} />
 
       <div className="content-grid">
         <InvestigationQueue

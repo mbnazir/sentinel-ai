@@ -1,6 +1,7 @@
 import axios from "axios";
 import type { ApiResponse, InvestigationCase, InvestigationNarrative } from "../types";
 import type { TimelineVisualizationData } from "../timelineTypes";
+import type { ExecutiveDashboardSummary } from "../dashboardTypes";
 
 const client = axios.create({
   baseURL: "/api/v1/workflow",
@@ -51,5 +52,16 @@ const timelineClient = axios.create({
 
 export async function fetchTimelineVisualization(loginSessionExternalId: string): Promise<TimelineVisualizationData> {
   const response = await timelineClient.get<ApiResponse<TimelineVisualizationData>>(`/${loginSessionExternalId}`);
+  return response.data.data;
+}
+
+
+const dashboardClient = axios.create({
+  baseURL: "/api/v1/dashboard",
+  timeout: 30000
+});
+
+export async function fetchExecutiveDashboard(): Promise<ExecutiveDashboardSummary> {
+  const response = await dashboardClient.get<ApiResponse<ExecutiveDashboardSummary>>("/executive");
   return response.data.data;
 }

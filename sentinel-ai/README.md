@@ -181,3 +181,17 @@ Added:
 - AI API scaffold
 - AI tests
 - Documentation + ADR
+
+## Milestone 10: Persistence-backed Repositories + Workflow APIs
+
+Added:
+
+- Investigation persistence models
+- Investigation migration
+- InvestigationRepository
+- NarrativeRepository
+- Workflow service
+- Workflow APIs
+- API response mapper
+- Workflow tests
+- Documentation + ADR

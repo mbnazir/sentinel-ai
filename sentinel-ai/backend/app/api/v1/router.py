@@ -1,4 +1,5 @@
 from fastapi import APIRouter
+from app.workflows.api.routes import router as workflow_router
 from app.ai.api.routes import router as ai_router
 from app.investigations.api.routes import router as investigation_cases_router
 from app.analytics.behavior.api.routes import router as behavior_router
@@ -31,3 +32,5 @@ api_v1_router.include_router(behavior_router, prefix="/behavior", tags=["Behavio
 api_v1_router.include_router(investigation_cases_router, prefix="/investigations", tags=["Investigations"])
 
 api_v1_router.include_router(ai_router, prefix="/ai", tags=["AI Investigator"])
+
+api_v1_router.include_router(workflow_router, prefix="/workflow", tags=["Workflow"])

@@ -59,3 +59,7 @@
 
 - Added AI Investigator / Evidence Narrative Engine.
 - Added provider abstraction, mock provider, prompt builder, narrative parser, service, API scaffold, tests, documentation, and ADR.
+
+## 0.10.0
+
+- Added persistence-backed repositories and workflow APIs.

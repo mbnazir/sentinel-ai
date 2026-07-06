@@ -1,4 +1,5 @@
 import axios from "axios";
+import { getAccessToken } from "./auth";
 import type { ApiResponse, InvestigationCase, InvestigationNarrative } from "../types";
 import type { TimelineVisualizationData } from "../timelineTypes";
 import type { ExecutiveDashboardSummary } from "../dashboardTypes";
@@ -65,3 +66,18 @@ export async function fetchExecutiveDashboard(): Promise<ExecutiveDashboardSumma
   const response = await dashboardClient.get<ApiResponse<ExecutiveDashboardSummary>>("/executive");
   return response.data.data;
 }
+
+
+function attachAuthHeader(instance: ReturnType<typeof axios.create>): void {
+  instance.interceptors.request.use((config) => {
+    const token = getAccessToken();
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+    return config;
+  });
+}
+
+attachAuthHeader(client);
+attachAuthHeader(timelineClient);
+attachAuthHeader(dashboardClient);

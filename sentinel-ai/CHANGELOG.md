@@ -81,3 +81,7 @@
 ## 0.14.0
 
 - Added Executive Analytics Dashboard.
+
+## 0.15.0
+
+- Added production hardening and Auth/RBAC scaffolding.

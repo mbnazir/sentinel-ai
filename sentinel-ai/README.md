@@ -249,3 +249,20 @@ Added:
 - Demo fallback analytics
 - Tests
 - Documentation + ADR
+
+## Milestone 15: Production Hardening + Auth/RBAC
+
+Added:
+
+- Role and permission model
+- Principal model
+- Authorization service
+- JWT token service
+- Password hashing service
+- FastAPI auth dependencies
+- Development token endpoint
+- Security headers middleware
+- Audit log service scaffold
+- Frontend auth header injection
+- Tests
+- Security documentation + ADR

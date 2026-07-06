@@ -85,3 +85,7 @@
 ## 0.15.0
 
 - Added production hardening and Auth/RBAC scaffolding.
+
+## 0.16.0
+
+- Added route-level permission enforcement and persistent audit logging scaffolding.

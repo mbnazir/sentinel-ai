@@ -266,3 +266,14 @@ Added:
 - Frontend auth header injection
 - Tests
 - Security documentation + ADR
+
+## Milestone 16: Route-level Permission Enforcement + Persistent Audit Logging
+
+Added:
+
+- Workflow route permission enforcement
+- Persistent audit log repository
+- Persistent audit log service
+- Investigation workflow audit events
+- Tests
+- Documentation + ADR

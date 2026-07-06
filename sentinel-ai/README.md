@@ -210,3 +210,15 @@ Added:
 - Frontend Dockerfile
 - Docker Compose frontend service
 - Dashboard documentation + ADR
+
+## Milestone 12: Timeline / Evidence Visualization UI
+
+Added:
+
+- Timeline visualization types
+- Demo timeline evidence data
+- Source-lane activity timeline component
+- Timeline findings panel
+- Risk-colored activity blocks
+- Case detail integration
+- Visualization documentation + ADR

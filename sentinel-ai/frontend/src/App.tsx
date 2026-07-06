@@ -5,6 +5,7 @@ import { CaseDetail } from "./components/CaseDetail";
 import { DashboardSummary } from "./components/DashboardSummary";
 import { InvestigationQueue } from "./components/InvestigationQueue";
 import { mockCases } from "./mockData";
+import { mockTimelineByCase } from "./mockTimelineData";
 import type { InvestigationCase, InvestigationNarrative } from "./types";
 import "./styles.css";
 
@@ -74,6 +75,7 @@ export default function App() {
           selectedCase={selectedCase}
           narrative={narrative}
           onGenerateNarrative={handleGenerateNarrative}
+          timelineData={selectedCase ? mockTimelineByCase[selectedCase.case_id] ?? null : null}
         />
       </div>
     </main>

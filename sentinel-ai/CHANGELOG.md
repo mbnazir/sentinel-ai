@@ -68,3 +68,8 @@
 
 - Added React Investigation Dashboard.
 - Added investigation queue, case detail, evidence viewer, narrative panel, frontend Docker setup, documentation, and ADR.
+
+## 0.12.0
+
+- Added Timeline / Evidence Visualization UI.
+- Added source lanes, activity blocks, timeline findings, demo evidence, documentation, and ADR.

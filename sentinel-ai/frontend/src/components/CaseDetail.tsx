@@ -1,5 +1,8 @@
 import { useState } from "react";
 import type { InvestigationCase, InvestigationNarrative } from "../types";
+import type { TimelineVisualizationData } from "../timelineTypes";
+import { TimelineVisualization } from "./TimelineVisualization";
+import { TimelineEvidencePanel } from "./TimelineEvidencePanel";
 import { RiskBadge } from "./RiskBadge";
 import { StatusBadge } from "./StatusBadge";
 
@@ -7,9 +10,10 @@ interface Props {
   selectedCase: InvestigationCase | null;
   narrative: InvestigationNarrative | null;
   onGenerateNarrative: () => void;
+  timelineData: TimelineVisualizationData | null;
 }
 
-export function CaseDetail({ selectedCase, narrative, onGenerateNarrative }: Props) {
+export function CaseDetail({ selectedCase, narrative, onGenerateNarrative, timelineData }: Props) {
   const [comment, setComment] = useState("");
 
   if (!selectedCase) {
@@ -38,6 +42,10 @@ export function CaseDetail({ selectedCase, narrative, onGenerateNarrative }: Pro
 
       <h3>Summary</h3>
       <p>{selectedCase.summary}</p>
+
+      <TimelineVisualization data={timelineData} />
+
+      <TimelineEvidencePanel evidence={timelineData?.evidence ?? []} />
 
       <h3>Evidence</h3>
       <div className="evidence-list">

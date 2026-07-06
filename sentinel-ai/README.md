@@ -195,3 +195,18 @@ Added:
 - API response mapper
 - Workflow tests
 - Documentation + ADR
+
+## Milestone 11: React Investigation Dashboard
+
+Added:
+
+- React + TypeScript frontend scaffold
+- Investigation queue
+- Case detail view
+- Risk/status badges
+- Evidence viewer
+- AI narrative panel
+- Demo-data fallback
+- Frontend Dockerfile
+- Docker Compose frontend service
+- Dashboard documentation + ADR

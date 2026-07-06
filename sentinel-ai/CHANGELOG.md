@@ -63,3 +63,8 @@
 ## 0.10.0
 
 - Added persistence-backed repositories and workflow APIs.
+
+## 0.11.0
+
+- Added React Investigation Dashboard.
+- Added investigation queue, case detail, evidence viewer, narrative panel, frontend Docker setup, documentation, and ADR.

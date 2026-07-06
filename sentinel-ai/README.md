@@ -345,3 +345,10 @@ Added:
 - Scan API endpoint
 - Tests
 - Documentation + ADR
+
+
+## Milestone 22
+- Scan persistence scaffolding
+- Case creation scaffolding
+- Duplicate suppression scaffolding
+- History API scaffold

@@ -1,4 +1,5 @@
 from fastapi import APIRouter
+from app.investigations.api.routes import router as investigation_cases_router
 from app.analytics.behavior.api.routes import router as behavior_router
 from app.scoring.api.routes import router as scoring_router
 from app.rules.api.routes import router as rules_router
@@ -25,3 +26,5 @@ api_v1_router.include_router(rules_router, prefix="/rules", tags=["Rules"])
 api_v1_router.include_router(scoring_router, prefix="/risk", tags=["Risk Scoring"])
 
 api_v1_router.include_router(behavior_router, prefix="/behavior", tags=["Behavior Analytics"])
+
+api_v1_router.include_router(investigation_cases_router, prefix="/investigations", tags=["Investigations"])

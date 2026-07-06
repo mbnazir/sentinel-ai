@@ -154,3 +154,16 @@ Added:
 - Behavior API scaffold
 - Tests
 - Documentation + ADR
+
+## Milestone 8: Investigation Case Management
+
+Added:
+
+- Investigation case domain model
+- Investigation status lifecycle
+- Priority mapping from risk score
+- Case creation from risk assessments
+- Assignment, transition, and comment services
+- Investigation API scaffold
+- Tests
+- Documentation + ADR

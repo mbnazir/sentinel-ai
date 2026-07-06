@@ -49,3 +49,8 @@
 
 - Added Behavior Analytics Engine.
 - Added agent/supervisor behavior profiles, trend detection, peer comparison, behavior scoring, API scaffold, tests, documentation, and ADR.
+
+## 0.8.0
+
+- Added Investigation Case Management.
+- Added case lifecycle, priority mapping, case service, comments, evidence links, API scaffold, tests, documentation, and ADR.

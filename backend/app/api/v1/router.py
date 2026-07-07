@@ -1,30 +1,6 @@
 from fastapi import APIRouter
-from app.scoring.api.routes import router as scoring_router
-from app.rules.api.routes import router as rules_router
-from app.matcher.api.routes import router as match_router
-from app.timeline.api.routes import router as timeline_router
 
-from app.api.v1.auth.routes import router as auth_router
-from app.api.v1.connectors.routes import router as connectors_router
-from app.api.v1.health.routes import router as health_router
-from app.api.v1.scans.routes import router as scans_router
-from app.analytics.behavior.api.persistent_routes import router as persistent_behavior_router
+from app.platform.routing.register_routers import register_routers
+from app.platform.routing.router_registry import ROUTER_REGISTRY
 
-api_v1_router = APIRouter()
-api_v1_router.include_router(health_router, prefix="/health", tags=["Health"])
-api_v1_router.include_router(auth_router, prefix="/auth", tags=["Authentication"])
-api_v1_router.include_router(scans_router, prefix="/scans", tags=["Scans"])
-api_v1_router.include_router(connectors_router, prefix="/connectors", tags=["Connectors"])
-
-api_v1_router.include_router(timeline_router, prefix="/timelines", tags=["Timelines"])
-
-api_v1_router.include_router(match_router, prefix="/matches", tags=["Activity Matching"])
-
-api_v1_router.include_router(rules_router, prefix="/rules", tags=["Rules"])
-
-api_v1_router.include_router(scoring_router, prefix="/risk", tags=["Risk Scoring"])
-api_v1_router.include_router(
-    persistent_behavior_router,
-    prefix="/behavior-intelligence",
-    tags=["Behavior Intelligence"],
-)
+api_v1_router = register_routers(APIRouter(), ROUTER_REGISTRY)

@@ -139,3 +139,216 @@ Added:
 - Risk API scaffold
 - Risk scoring tests
 - Risk scoring documentation and ADR
+
+## Milestone 7: Behavior Analytics Engine
+
+Added:
+
+- BehaviorProfile domain model
+- SessionRiskFact model
+- Behavior metrics
+- Trend detection
+- Peer comparison
+- Agent and supervisor profile aggregation
+- Behavior risk scoring
+- Behavior API scaffold
+- Tests
+- Documentation + ADR
+
+## Milestone 8: Investigation Case Management
+
+Added:
+
+- Investigation case domain model
+- Investigation status lifecycle
+- Priority mapping from risk score
+- Case creation from risk assessments
+- Assignment, transition, and comment services
+- Investigation API scaffold
+- Tests
+- Documentation + ADR
+
+## Milestone 9: AI Investigator / Evidence Narrative Engine
+
+Added:
+
+- AI provider abstraction
+- Mock AI provider
+- OpenAI provider scaffold
+- Investigation prompt builder
+- Narrative parser
+- Investigation narrative service
+- AI API scaffold
+- AI tests
+- Documentation + ADR
+
+## Milestone 10: Persistence-backed Repositories + Workflow APIs
+
+Added:
+
+- Investigation persistence models
+- Investigation migration
+- InvestigationRepository
+- NarrativeRepository
+- Workflow service
+- Workflow APIs
+- API response mapper
+- Workflow tests
+- Documentation + ADR
+
+## Milestone 11: React Investigation Dashboard
+
+Added:
+
+- React + TypeScript frontend scaffold
+- Investigation queue
+- Case detail view
+- Risk/status badges
+- Evidence viewer
+- AI narrative panel
+- Demo-data fallback
+- Frontend Dockerfile
+- Docker Compose frontend service
+- Dashboard documentation + ADR
+
+## Milestone 12: Timeline / Evidence Visualization UI
+
+Added:
+
+- Timeline visualization types
+- Demo timeline evidence data
+- Source-lane activity timeline component
+- Timeline findings panel
+- Risk-colored activity blocks
+- Case detail integration
+- Visualization documentation + ADR
+
+## Milestone 13: Backend-backed Timeline Retrieval API
+
+Added:
+
+- Normalized timeline activity persistence model
+- Timeline migration
+- Timeline activity repository
+- Timeline API mapper
+- Repository-backed timeline endpoint
+- Frontend timeline API client
+- Dashboard timeline loading with fallback
+- Tests
+- Documentation + ADR
+
+## Milestone 14: Executive Analytics Dashboard
+
+Added:
+
+- Executive dashboard backend summary service
+- Executive dashboard API
+- Risk distribution, trend, and top entity models
+- Frontend executive analytics panel
+- ECharts risk distribution and trend charts
+- Demo fallback analytics
+- Tests
+- Documentation + ADR
+
+## Milestone 15: Production Hardening + Auth/RBAC
+
+Added:
+
+- Role and permission model
+- Principal model
+- Authorization service
+- JWT token service
+- Password hashing service
+- FastAPI auth dependencies
+- Development token endpoint
+- Security headers middleware
+- Audit log service scaffold
+- Frontend auth header injection
+- Tests
+- Security documentation + ADR
+
+## Milestone 16: Route-level Permission Enforcement + Persistent Audit Logging
+
+Added:
+
+- Workflow route permission enforcement
+- Persistent audit log repository
+- Persistent audit log service
+- Investigation workflow audit events
+- Tests
+- Documentation + ADR
+
+## Milestone 17: Enterprise SSO + Persistent User Management
+
+Added:
+
+- Persistent Sentinel user model
+- User migration
+- User repository
+- Local user creation and login
+- SSO provider abstraction
+- Mock SSO provider
+- SSO role mapper
+- SSO auth service
+- User and SSO APIs
+- Tests
+- Documentation + ADR
+
+## Milestone 18: Azure AD / Google Workspace SSO Providers
+
+Added:
+
+- Generic OIDC provider
+- Azure AD / Entra ID provider
+- Google Workspace provider
+- SSO provider factory
+- Generic provider callback endpoint
+- SSO environment variables
+- Provider tests
+- Documentation + ADR
+
+## Milestone 19: Connector Ingestion Hardening + Quartz API Production Connector
+
+Added:
+
+- Quartz API client
+- Pagination and retry-aware request wrapper
+- Quartz DTO mapper
+- Normalized mapper
+- Shift-date range ingestion service
+- Quartz sync API
+- Connector env variables
+- Tests
+- Documentation + ADR
+
+## Milestone 20: Persist Normalized Quartz Ingestion
+
+Added:
+
+- Normalized login session store
+- Normalized activity store
+- Alembic migration
+- Idempotent normalized ingestion repository
+- Persisted Quartz ingestion service
+- Quartz sync API now persists data
+- Tests
+- Documentation + ADR
+
+## Milestone 21: Automated Scan Pipeline from Normalized Data
+
+Added:
+
+- Scan domain models
+- Normalized scan repository
+- Normalized activity mapper
+- End-to-end scan pipeline service
+- Scan API endpoint
+- Tests
+- Documentation + ADR
+
+
+## Milestone 22
+- Scan persistence scaffolding
+- Case creation scaffolding
+- Duplicate suppression scaffolding
+- History API scaffold

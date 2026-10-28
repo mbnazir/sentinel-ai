@@ -89,6 +89,8 @@ def observation_from_session_snapshot(row: SessionSnapshotModel) -> ManagerDecis
         machine_hostname=row.machine_hostname,
         primary_campaign_id=row.primary_campaign_id,
         primary_campaign_name=row.primary_campaign_name,
+        primary_client_id=row.primary_client_id,
+        primary_client_name=row.primary_client_name,
         metadata=row.metadata_json,
     )
     return ManagerDecisionObservation(

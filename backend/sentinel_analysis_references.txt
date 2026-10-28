@@ -1,0 +1,60 @@
+app/investigations/service.py:11:    AnalysisScanModel,
+app/investigations/service.py:13:    DurableFindingModel,
+app/investigations/service.py:29:async def create_scan(db: AsyncSession, payload: ScanCreate) -> AnalysisScanModel:
+app/investigations/service.py:32:    scan = AnalysisScanModel(
+app/investigations/service.py:66:) -> DurableFindingModel | None:
+app/investigations/service.py:82:    stmt = pg_insert(DurableFindingModel).values(**values).on_conflict_do_nothing(
+app/investigations/service.py:84:    ).returning(DurableFindingModel.id)
+app/investigations/service.py:88:    return await db.get(DurableFindingModel, inserted_id)
+app/investigations/service.py:105:        result = await db.execute(select(DurableFindingModel.id).where(DurableFindingModel.id.in_(payload.finding_ids)))
+app/ai/service.py:11:    DurableFindingModel,
+app/ai/service.py:30:    result=await db.execute(select(DurableFindingModel).join(CaseFindingModel,CaseFindingModel.finding_id==DurableFindingModel.id).where(CaseFindingModel.case_id==case_id).order_by(DurableFindingModel.risk_contribution.desc()))
+app/rules/engine.py:2:from app.rules.builtin import BUILTIN_RULES
+app/rules/engine.py:9:class IntegrityRuleEngine:
+app/rules/engine.py:12:        rules: tuple[IntegrityRule, ...] = BUILTIN_RULES,
+app/rules/builtin.py:664:BUILTIN_RULES = (
+app/api/v1/routes_dashboard.py:10:    AnalysisScanModel,
+app/api/v1/routes_dashboard.py:11:    DurableFindingModel,
+app/api/v1/routes_dashboard.py:25:            select(AnalysisScanModel).order_by(AnalysisScanModel.started_at.desc()).limit(1)
+app/api/v1/routes_dashboard.py:29:        scan = await db.get(AnalysisScanModel, scan_id)
+app/api/v1/routes_dashboard.py:31:    findings: list[DurableFindingModel] = []
+app/api/v1/routes_dashboard.py:34:            select(DurableFindingModel).where(DurableFindingModel.scan_id == scan.id)
+app/api/v1/routes_dashboard.py:88:        select(DurableFindingModel)
+app/api/v1/routes_dashboard.py:89:        .where(DurableFindingModel.scan_id == scan_id)
+app/api/v1/routes_dashboard.py:90:        .order_by(DurableFindingModel.risk_contribution.desc())
+app/api/v1/routes_dashboard.py:141:        select(AnalysisScanModel).order_by(AnalysisScanModel.started_at.desc()).limit(limit)
+app/api/v1/routes_dashboard.py:165:    item = await db.get(DurableFindingModel, finding_id)
+app/api/v1/routes_investigations.py:9:from app.infrastructure.models import AnalysisScanModel, DurableFindingModel, InvestigationAuditEventModel, InvestigationCaseModel
+app/api/v1/routes_investigations.py:39:    scan = await db.get(AnalysisScanModel, scan_id)
+app/api/v1/routes_investigations.py:52:    scan = await db.get(AnalysisScanModel, scan_id)
+app/api/v1/routes_investigations.py:60:    result = await db.execute(select(DurableFindingModel).where(DurableFindingModel.scan_id == scan_id))
+app/api/v1/routes_assessments.py:8:from app.rules.engine import IntegrityRuleEngine
+app/api/v1/routes_assessments.py:14:engine = IntegrityRuleEngine()
+app/workers/tasks.py:13:    AnalysisScanModel,
+app/workers/tasks.py:15:    DurableFindingModel,
+app/workers/tasks.py:122:                scan = await db.get(AnalysisScanModel, scan_id)
+app/workers/tasks.py:207:                                select(func.count()).select_from(DurableFindingModel).where(
+app/workers/tasks.py:208:                                    DurableFindingModel.scan_id == scan.id,
+app/workers/tasks.py:209:                                    DurableFindingModel.shift_date >= chunk.date_from,
+app/workers/tasks.py:210:                                    DurableFindingModel.shift_date <= chunk.date_to,
+app/workers/tasks.py:234:                        select(func.count()).select_from(DurableFindingModel)
+app/workers/tasks.py:235:                        .where(DurableFindingModel.scan_id == scan.id)
+app/workers/tasks.py:260:                    scan = await db.get(AnalysisScanModel, scan_id)
+app/workers/pipeline.py:5:from app.rules.engine import IntegrityRuleEngine
+app/workers/pipeline.py:16:    assessment = IntegrityRuleEngine().evaluate(analyze_employee_day(timeline))
+app/finalization/service.py:3:from app.infrastructure.models import AnalysisScanModel, DurableFindingModel, ScanChunkModel
+app/finalization/service.py:6:async def summarize_scan(db:AsyncSession, scan:AnalysisScanModel)->ScanSummary:
+app/finalization/service.py:7:    result=await db.execute(select(DurableFindingModel).where(DurableFindingModel.scan_id==scan.id))
+app/infrastructure/models.py:209:class AnalysisScanModel(Base):
+app/infrastructure/models.py:210:    __tablename__ = "analysis_scans"
+app/infrastructure/models.py:212:        Index("ix_analysis_scans_ingestion_range", "ingestion_run_id", "date_from", "date_to"),
+app/infrastructure/models.py:239:class DurableFindingModel(Base):
+app/infrastructure/models.py:240:    __tablename__ = "durable_findings"
+app/infrastructure/models.py:243:        Index("ix_durable_findings_agent_shift", "agent_id", "shift_date"),
+app/infrastructure/models.py:244:        Index("ix_durable_findings_rule", "rule_id"),
+app/infrastructure/models.py:248:        PGUUID(as_uuid=True), ForeignKey("analysis_scans.id", ondelete="RESTRICT"), nullable=False
+app/infrastructure/models.py:293:        PGUUID(as_uuid=True), ForeignKey("durable_findings.id", ondelete="RESTRICT"), nullable=False
+app/infrastructure/models.py:309:        PGUUID(as_uuid=True), ForeignKey("analysis_scans.id", ondelete="RESTRICT"), nullable=True
+app/infrastructure/models.py:324:    scan_id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), ForeignKey("analysis_scans.id", ondelete="RESTRICT"), nullable=False)
+app/analytics/organization_service.py:11:from app.rules.engine import IntegrityRuleEngine
+app/analytics/organization_service.py:26:    engine=IntegrityRuleEngine(); policy=IntegrityPolicy(); rows=[]

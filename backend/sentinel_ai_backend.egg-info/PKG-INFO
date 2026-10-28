@@ -1,0 +1,26 @@
+Metadata-Version: 2.4
+Name: sentinel-ai-backend
+Version: 0.13.0
+Summary: Sentinel AI enterprise workforce integrity platform
+Requires-Python: >=3.13
+Requires-Dist: fastapi<1.0,>=0.116
+Requires-Dist: uvicorn[standard]<1.0,>=0.35
+Requires-Dist: sqlalchemy[asyncio]<3.0,>=2.0.40
+Requires-Dist: asyncpg<1.0,>=0.30
+Requires-Dist: alembic<2.0,>=1.16
+Requires-Dist: pydantic<3.0,>=2.11
+Requires-Dist: pydantic-settings<3.0,>=2.10
+Requires-Dist: redis<7.0,>=6.2
+Requires-Dist: pyjwt[crypto]<3.0,>=2.10
+Requires-Dist: python-multipart<1.0,>=0.0.20
+Requires-Dist: structlog<26.0,>=25.4
+Requires-Dist: httpx<1.0,>=0.28
+Requires-Dist: celery<6.0,>=5.5
+Provides-Extra: dev
+Requires-Dist: pytest<9.0,>=8.4; extra == "dev"
+Requires-Dist: pytest-asyncio<2.0,>=1.0; extra == "dev"
+Requires-Dist: pytest-cov<7.0,>=6.2; extra == "dev"
+Requires-Dist: ruff<1.0,>=0.12; extra == "dev"
+Requires-Dist: mypy<2.0,>=1.17; extra == "dev"
+Requires-Dist: bandit<2.0,>=1.8; extra == "dev"
+Requires-Dist: pre-commit<5.0,>=4.2; extra == "dev"

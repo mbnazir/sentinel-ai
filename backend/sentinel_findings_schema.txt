@@ -1,0 +1,43 @@
+                                                   Table "public.durable_findings"
+      Column       |           Type           | Collation | Nullable | Default | Storage  | Compression | Stats target | Description 
+-------------------+--------------------------+-----------+----------+---------+----------+-------------+--------------+-------------
+ id                | uuid                     |           | not null |         | plain    |             |              | 
+ scan_id           | uuid                     |           | not null |         | plain    |             |              | 
+ finding_key       | character varying(180)   |           | not null |         | extended |             |              | 
+ agent_id          | character varying(64)    |           |          |         | extended |             |              | 
+ shift_date        | date                     |           |          |         | plain    |             |              | 
+ source_session_id | character varying(64)    |           |          |         | extended |             |              | 
+ rule_id           | character varying(50)    |           | not null |         | extended |             |              | 
+ severity          | character varying(20)    |           | not null |         | extended |             |              | 
+ confidence        | double precision         |           | not null |         | plain    |             |              | 
+ risk_contribution | double precision         |           | not null |         | plain    |             |              | 
+ reason            | text                     |           | not null |         | extended |             |              | 
+ evidence_json     | jsonb                    |           | not null |         | extended |             |              | 
+ immutable_hash    | character varying(64)    |           | not null |         | extended |             |              | 
+ created_at        | timestamp with time zone |           |          | now()   | plain    |             |              | 
+Indexes:
+    "durable_findings_pkey" PRIMARY KEY, btree (id)
+    "ix_durable_findings_agent_shift" btree (agent_id, shift_date)
+    "ix_durable_findings_rule" btree (rule_id)
+    "uq_durable_finding_scan_key" UNIQUE CONSTRAINT, btree (scan_id, finding_key)
+Foreign-key constraints:
+    "durable_findings_scan_id_fkey" FOREIGN KEY (scan_id) REFERENCES analysis_scans(id) ON DELETE RESTRICT
+Referenced by:
+    TABLE "case_findings" CONSTRAINT "case_findings_finding_id_fkey" FOREIGN KEY (finding_id) REFERENCES durable_findings(id) ON DELETE RESTRICT
+Access method: heap
+
+                                                Table "public.case_findings"
+   Column   |           Type           | Collation | Nullable | Default | Storage | Compression | Stats target | Description 
+------------+--------------------------+-----------+----------+---------+---------+-------------+--------------+-------------
+ id         | uuid                     |           | not null |         | plain   |             |              | 
+ case_id    | uuid                     |           | not null |         | plain   |             |              | 
+ finding_id | uuid                     |           | not null |         | plain   |             |              | 
+ linked_at  | timestamp with time zone |           |          | now()   | plain   |             |              | 
+Indexes:
+    "case_findings_pkey" PRIMARY KEY, btree (id)
+    "uq_case_finding" UNIQUE CONSTRAINT, btree (case_id, finding_id)
+Foreign-key constraints:
+    "case_findings_case_id_fkey" FOREIGN KEY (case_id) REFERENCES investigation_cases(id) ON DELETE RESTRICT
+    "case_findings_finding_id_fkey" FOREIGN KEY (finding_id) REFERENCES durable_findings(id) ON DELETE RESTRICT
+Access method: heap
+

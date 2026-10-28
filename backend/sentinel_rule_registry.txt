@@ -1,0 +1,100 @@
+                    continue
+                for match in comparison.matches:
+                    if match.duration_delta_seconds <= 0 or match.comparison_activity is None:
+                        continue
+                    if match.comparison_activity.comment and match.comparison_activity.comment.strip():
+                        continue
+                    findings.append(_finding(
+                        rule_id=self.rule_id,
+                        rule_name=self.name,
+                        category=FindingCategory.WORKFLOW,
+                        severity=RuleSeverity.LOW,
+                        confidence=match.confidence,
+                        source_session_id=session_analysis.source_session_id,
+                        reason=f"{comparison.comparison_source.label} added {round(match.duration_delta_seconds / 60)} minutes without an activity-level comment.",
+                        metadata={"added_seconds": match.duration_delta_seconds},
+                    ))
+        return tuple(findings)
+
+
+class PhoneSystemMismatchRule:
+    rule_id = "SA-R023"
+    name = "Phone/System captured-time mismatch"
+
+    def evaluate(self, context: RuleContext) -> tuple[RuleFinding, ...]:
+        findings: list[RuleFinding] = []
+        for session in context.analysis.timeline.sessions:
+            phone = context.source_seconds(session, ActivityDataSource.PHONE)
+            system = context.source_seconds(session, ActivityDataSource.SYSTEM)
+            if phone == 0 or system == 0:
+                continue
+            delta = abs(phone - system)
+            if delta <= context.policy.phone_system_mismatch_seconds:
+                continue
+            findings.append(_finding(
+                rule_id=self.rule_id,
+                rule_name=self.name,
+                category=FindingCategory.DATA_QUALITY,
+                severity=RuleSeverity.MEDIUM,
+                confidence=1.0,
+                source_session_id=session.source_session_id,
+                reason=f"Phone and System captured durations differ by {round(delta / 60)} minutes; manual adjustments require additional corroboration.",
+                metadata={"phone_seconds": phone, "system_seconds": system, "difference_seconds": delta},
+            ))
+        return tuple(findings)
+
+
+class MultiStageManualRevisionRule:
+    rule_id = "SA-R024"
+    name = "Multiple manual workflow stages modified session"
+
+    def evaluate(self, context: RuleContext) -> tuple[RuleFinding, ...]:
+        findings: list[RuleFinding] = []
+        for session in context.analysis.timeline.sessions:
+            sources = [
+                source
+                for source in (ActivityDataSource.AGENT, ActivityDataSource.SUPERVISOR, ActivityDataSource.MANAGER, ActivityDataSource.PAYROLL)
+                if context.source_activities(session, source)
+            ]
+            if len(sources) < 3:
+                continue
+            findings.append(_finding(
+                rule_id=self.rule_id,
+                rule_name=self.name,
+                category=FindingCategory.WORKFLOW,
+                severity=RuleSeverity.MEDIUM,
+                confidence=0.9,
+                source_session_id=session.source_session_id,
+                reason=f"Session contains manual versions from {len(sources)} workflow stages: {', '.join(source.label for source in sources)}.",
+                magnitude=1.0 + ((len(sources) - 3) * 0.25),
+                metadata={"manual_sources": [source.label for source in sources]},
+            ))
+        return tuple(findings)
+
+
+BUILTIN_RULES = (
+    AgentAddedTimeWithoutReviewRule(),
+    RoleAddedTimeRule("SA-R002", "Supervisor added time beyond prior version", ActivityDataSource.SUPERVISOR, RuleSeverity.CRITICAL, FindingCategory.COLLUSION),
+    RoleAddedTimeRule("SA-R003", "Manager added time beyond prior version", ActivityDataSource.MANAGER, RuleSeverity.CRITICAL, FindingCategory.COLLUSION),
+    RoleAddedTimeRule("SA-R004", "Payroll added time beyond prior version", ActivityDataSource.PAYROLL, RuleSeverity.CRITICAL, FindingCategory.PAYROLL),
+    CapturedActivityRemovedRule(ActivityDataSource.SYSTEM, "SA-R005", "System activity removed from manual version"),
+    CapturedActivityRemovedRule(ActivityDataSource.PHONE, "SA-R006", "Phone activity removed from manual version"),
+    ManualActivityInsertedRule(),
+    ActivityTypeChangedRule(),
+    LargeAdditionRule(),
+    RoundedAdditionRule(),
+    FinalExceedsCaptureRule(),
+    DirectWorkflowEditRule(rule_id="SA-R012", name="Supervisor edited without Agent version", source=ActivityDataSource.SUPERVISOR, required_prior=(ActivityDataSource.AGENT,), severity=RuleSeverity.HIGH),
+    DirectWorkflowEditRule(rule_id="SA-R013", name="Manager edited without Agent/Supervisor version", source=ActivityDataSource.MANAGER, required_prior=(ActivityDataSource.AGENT, ActivityDataSource.SUPERVISOR), severity=RuleSeverity.HIGH),
+    PayrollAfterManagerApprovalRule(),
+    SessionOverlapRule(),
+    RepeatedModifiedSessionsRule(),
+    MultipleLoginsFlagRule(),
+    ManualSessionWithoutCaptureRule(),
+    LowCaptureCoverageRule(),
+    ExcessiveFinalDayRule(),
+    InactivityReducedRule(),
+    MissingCommentOnAdditionRule(),
+    PhoneSystemMismatchRule(),
+    MultiStageManualRevisionRule(),
+)

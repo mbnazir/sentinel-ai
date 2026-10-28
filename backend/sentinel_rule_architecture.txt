@@ -1,0 +1,432 @@
+========== app/rules/base.py ==========
+from typing import Protocol
+
+from app.rules.context import RuleContext
+from app.rules.models import RuleFinding
+
+
+class IntegrityRule(Protocol):
+    rule_id: str
+    name: str
+
+    def evaluate(self, context: RuleContext) -> tuple[RuleFinding, ...]: ...
+========== app/rules/context.py ==========
+from collections import defaultdict
+from dataclasses import dataclass
+
+from app.domain.data_sources import ActivityDataSource
+from app.timeline.analysis import EmployeeDayAnalysis
+from app.timeline.models import TimelineActivity, TimelineSession
+
+
+@dataclass(frozen=True, slots=True)
+class IntegrityPolicy:
+    large_addition_seconds: int = 3600
+    captured_evidence_low_seconds: int = 3 * 3600
+    final_vs_capture_tolerance_seconds: int = 30 * 60
+    phone_system_mismatch_seconds: int = 60 * 60
+    rounded_increment_seconds: int = 30 * 60
+    minimum_rounded_addition_seconds: int = 30 * 60
+    excessive_day_seconds: int = 12 * 3600
+    repeated_modified_sessions_threshold: int = 2
+
+
+@dataclass(frozen=True, slots=True)
+class RuleContext:
+    analysis: EmployeeDayAnalysis
+    policy: IntegrityPolicy
+
+    def session(self, source_session_id: str) -> TimelineSession:
+        return next(
+            session
+            for session in self.analysis.timeline.sessions
+            if session.source_session_id == source_session_id
+        )
+
+    def source_activities(
+        self,
+        session: TimelineSession,
+        source: ActivityDataSource,
+    ) -> list[TimelineActivity]:
+        return [activity for activity in session.activities if activity.data_source_id == source]
+
+    def source_seconds(self, session: TimelineSession, source: ActivityDataSource) -> int:
+        return sum(activity.duration_seconds for activity in self.source_activities(session, source))
+
+    def session_source_totals(self, session: TimelineSession) -> dict[ActivityDataSource, int]:
+        totals: dict[ActivityDataSource, int] = defaultdict(int)
+        for activity in session.activities:
+            totals[activity.data_source_id] += activity.duration_seconds
+        return dict(totals)
+
+    def captured_seconds(self, session: TimelineSession) -> int:
+        return max(
+            self.source_seconds(session, ActivityDataSource.PHONE),
+            self.source_seconds(session, ActivityDataSource.SYSTEM),
+        )
+
+    def latest_manual_seconds(self, session: TimelineSession) -> tuple[ActivityDataSource | None, int]:
+        for source in (
+            ActivityDataSource.PAYROLL,
+            ActivityDataSource.MANAGER,
+            ActivityDataSource.SUPERVISOR,
+            ActivityDataSource.AGENT,
+        ):
+            seconds = self.source_seconds(session, source)
+            if seconds > 0:
+                return source, seconds
+        return None, 0
+========== app/rules/models.py ==========
+from enum import StrEnum
+
+from pydantic import BaseModel, ConfigDict, Field
+
+from app.evidence.models import EvidenceItem
+
+
+class RuleSeverity(StrEnum):
+    INFO = "info"
+    LOW = "low"
+    MEDIUM = "medium"
+    HIGH = "high"
+    CRITICAL = "critical"
+
+
+class FindingCategory(StrEnum):
+    INTEGRITY = "integrity"
+    WORKFLOW = "workflow"
+    PAYROLL = "payroll"
+    COLLUSION = "collusion"
+    DATA_QUALITY = "data_quality"
+
+
+class RuleFinding(BaseModel):
+    model_config = ConfigDict(frozen=True)
+
+    rule_id: str
+    rule_name: str
+    category: FindingCategory
+    severity: RuleSeverity
+    source_session_id: str | None = None
+    confidence: float = Field(ge=0.0, le=1.0)
+    risk_contribution: float = Field(ge=0.0, le=100.0)
+    reason: str
+    evidence: tuple[EvidenceItem, ...] = ()
+    metadata: dict[str, object] = Field(default_factory=dict)
+
+
+class RiskLevel(StrEnum):
+    NORMAL = "normal"
+    REVIEW = "review"
+    SUSPICIOUS = "suspicious"
+    HIGH = "high"
+    CRITICAL = "critical"
+
+
+class RiskAssessment(BaseModel):
+    model_config = ConfigDict(frozen=True)
+
+    risk_score: float = Field(ge=0.0, le=100.0)
+    risk_level: RiskLevel
+    finding_count: int
+    critical_count: int
+    high_count: int
+    findings: tuple[RuleFinding, ...]
+    mitigating_notes: tuple[str, ...] = ()
+========== app/rules/engine.py ==========
+from app.rules.base import IntegrityRule
+from app.rules.builtin import BUILTIN_RULES
+from app.rules.context import IntegrityPolicy, RuleContext
+from app.rules.models import RiskAssessment, RuleFinding
+from app.scoring.risk import assess
+from app.timeline.analysis import EmployeeDayAnalysis
+
+
+class IntegrityRuleEngine:
+    def __init__(
+        self,
+        rules: tuple[IntegrityRule, ...] = BUILTIN_RULES,
+        policy: IntegrityPolicy | None = None,
+    ) -> None:
+        self.rules = rules
+        self.policy = policy or IntegrityPolicy()
+
+    def evaluate(self, analysis: EmployeeDayAnalysis) -> RiskAssessment:
+        context = RuleContext(analysis=analysis, policy=self.policy)
+        findings: list[RuleFinding] = []
+        for rule in self.rules:
+            findings.extend(rule.evaluate(context))
+        findings.sort(
+            key=lambda item: (
+                -item.risk_contribution,
+                item.rule_id,
+                item.source_session_id or "",
+            )
+        )
+        mitigating_notes = tuple(
+            finding.reason
+            for finding in findings
+            if finding.category.value == "data_quality" and finding.severity.value == "info"
+        )
+        return assess(tuple(findings), mitigating_notes)
+========== app/rules/builtin.py ==========
+from collections import defaultdict
+from multiprocessing import context
+
+from app.domain.data_sources import ActivityDataSource
+from app.evidence.models import EvidenceItem, EvidenceKind
+from app.matcher.models import ActivityChangeType
+from app.rules.context import RuleContext
+from app.rules.models import FindingCategory, RuleFinding, RuleSeverity
+from app.scoring.risk import contribution
+
+
+def _manual_positive_change(evidence: EvidenceItem, source: ActivityDataSource) -> bool:
+    return (
+        evidence.evidence_kind == EvidenceKind.ACTIVITY_CHANGE
+        and evidence.comparison_source == source
+        and evidence.change_type in {
+            ActivityChangeType.INSERTED,
+            ActivityChangeType.EXTENDED,
+            ActivityChangeType.COMPOUND,
+        }
+        and evidence.seconds_delta > 0
+    )
+
+
+def _confidence_with_capture(context: RuleContext, session_id: str, evidence_confidence: float) -> float:
+    session = context.session(session_id)
+    captured = context.captured_seconds(session)
+    if 0 < captured < context.policy.captured_evidence_low_seconds:
+        return round(evidence_confidence * 0.65, 4)
+    return evidence_confidence
+
+
+def _finding(
+    *,
+    rule_id: str,
+    rule_name: str,
+    category: FindingCategory,
+    severity: RuleSeverity,
+    confidence: float,
+    reason: str,
+    source_session_id: str | None = None,
+    evidence: tuple[EvidenceItem, ...] = (),
+    magnitude: float = 1.0,
+    metadata: dict[str, object] | None = None,
+) -> RuleFinding:
+    return RuleFinding(
+        rule_id=rule_id,
+        rule_name=rule_name,
+        category=category,
+        severity=severity,
+        source_session_id=source_session_id,
+        confidence=confidence,
+        risk_contribution=contribution(severity, confidence, magnitude),
+        reason=reason,
+        evidence=evidence,
+        metadata=metadata or {},
+    )
+
+
+class AgentAddedTimeWithoutReviewRule:
+    rule_id = "SA-R001"
+    name = "Agent added time without downstream review"
+
+    def evaluate(self, context: RuleContext) -> tuple[RuleFinding, ...]:
+        findings: list[RuleFinding] = []
+        by_session: dict[str, list[EvidenceItem]] = defaultdict(list)
+        for item in context.analysis.evidence:
+            if item.source_session_id and _manual_positive_change(item, ActivityDataSource.AGENT):
+                by_session[item.source_session_id].append(item)
+        for session_id, items in by_session.items():
+            session = context.session(session_id)
+            later_sources = {
+                ActivityDataSource.SUPERVISOR,
+                ActivityDataSource.MANAGER,
+                ActivityDataSource.PAYROLL,
+            }
+            if any(activity.data_source_id in later_sources for activity in session.activities):
+                continue
+            if session.supervisor_action_at is not None or session.manager_action_at is not None:
+                continue
+            added = sum(max(0, item.seconds_delta) for item in items)
+            confidence = min(_confidence_with_capture(context, session_id, max(i.confidence for i in items)), 0.95)
+            findings.append(_finding(
+                rule_id=self.rule_id,
+                rule_name=self.name,
+                category=FindingCategory.WORKFLOW,
+                severity=RuleSeverity.HIGH,
+                confidence=confidence,
+                source_session_id=session_id,
+                evidence=tuple(items),
+                magnitude=1.0 + min(added / 7200, 0.75),
+                reason=f"Agent-added time ({round(added / 60)} minutes) has no Supervisor, Manager, or Payroll activity version after it.",
+                metadata={"added_seconds": added},
+            ))
+        return tuple(findings)
+
+
+class RoleAddedTimeRule:
+    def __init__(
+        self,
+        rule_id: str,
+        name: str,
+        source: ActivityDataSource,
+        severity: RuleSeverity,
+        category: FindingCategory,
+    ) -> None:
+        self.rule_id = rule_id
+        self.name = name
+        self.source = source
+        self.severity = severity
+        self.category = category
+
+    def evaluate(self, context: RuleContext) -> tuple[RuleFinding, ...]:
+        findings: list[RuleFinding] = []
+        by_session: dict[str, list[EvidenceItem]] = defaultdict(list)
+        for item in context.analysis.evidence:
+            if item.source_session_id and _manual_positive_change(item, self.source):
+                by_session[item.source_session_id].append(item)
+        for session_id, items in by_session.items():
+            added = sum(max(0, item.seconds_delta) for item in items)
+            confidence = _confidence_with_capture(context, session_id, max(i.confidence for i in items))
+            findings.append(_finding(
+                rule_id=self.rule_id,
+                rule_name=self.name,
+                category=self.category,
+                severity=self.severity,
+                confidence=confidence,
+                source_session_id=session_id,
+                evidence=tuple(items),
+                magnitude=1.0 + min(added / 7200, 0.75),
+                reason=f"{self.source.label} increased matched/manual activity time by {round(added / 60)} minutes beyond the latest available prior version.",
+                metadata={"added_seconds": added, "comparison_source": self.source.label},
+            ))
+        return tuple(findings)
+
+
+class CapturedActivityRemovedRule:
+    def __init__(self, baseline: ActivityDataSource, rule_id: str, name: str) -> None:
+        self.baseline = baseline
+        self.rule_id = rule_id
+        self.name = name
+
+    def evaluate(self, context: RuleContext) -> tuple[RuleFinding, ...]:
+        findings: list[RuleFinding] = []
+        for item in context.analysis.evidence:
+            if (
+                item.evidence_kind == EvidenceKind.ACTIVITY_CHANGE
+                and item.change_type == ActivityChangeType.REMOVED
+                and item.baseline_source == self.baseline
+                and item.comparison_source is not None
+                and item.comparison_source.is_manual
+                and item.source_session_id
+            ):
+                seconds = abs(item.seconds_delta)
+                # Open-ended activities cannot establish a reliable
+                # removed-duration magnitude.
+                if item.end_at is None:
+                    continue
+
+                # Avoid classifying negligible duration differences
+                # as critical time-loss findings.
+                if seconds < 60:
+                    continue
+
+                confidence = _confidence_with_capture(
+                    context, item.source_session_id, item.confidence
+                )
+                findings.append(_finding(
+                    rule_id=self.rule_id,
+                    rule_name=self.name,
+                    category=FindingCategory.INTEGRITY,
+                    severity=RuleSeverity.CRITICAL,
+                    confidence=confidence,
+                    source_session_id=item.source_session_id,
+                    evidence=(item,),
+                    magnitude=1.0 + min(seconds / 3600, 0.75),
+                    reason=f"A {self.baseline.label} activity covering {round(seconds / 60)} minutes is absent from the later {item.comparison_source.label} version.",
+                    metadata={"removed_seconds": seconds},
+                ))
+        return tuple(findings)
+
+
+class ManualActivityInsertedRule:
+    rule_id = "SA-R007"
+    name = "Manual activity inserted"
+
+    def evaluate(self, context: RuleContext) -> tuple[RuleFinding, ...]:
+        findings: list[RuleFinding] = []
+        for item in context.analysis.evidence:
+            if (
+                item.evidence_kind == EvidenceKind.ACTIVITY_CHANGE
+                and item.change_type == ActivityChangeType.INSERTED
+                and item.comparison_source is not None
+                and item.comparison_source.is_manual
+                and item.source_session_id
+            ):
+                confidence = _confidence_with_capture(context, item.source_session_id, item.confidence)
+                findings.append(_finding(
+                    rule_id=self.rule_id,
+                    rule_name=self.name,
+                    category=FindingCategory.INTEGRITY,
+                    severity=RuleSeverity.HIGH,
+                    confidence=confidence,
+                    source_session_id=item.source_session_id,
+                    evidence=(item,),
+                    magnitude=1.0 + min(item.seconds_delta / 7200, 0.75),
+                    reason=f"{item.comparison_source.label} inserted an unmatched {round(item.seconds_delta / 60)}-minute activity.",
+                    metadata={"inserted_seconds": item.seconds_delta},
+                ))
+        return tuple(findings)
+
+
+class ActivityTypeChangedRule:
+    rule_id = "SA-R008"
+    name = "Manual activity type changed"
+
+    def evaluate(self, context: RuleContext) -> tuple[RuleFinding, ...]:
+        return tuple(
+            _finding(
+                rule_id=self.rule_id,
+                rule_name=self.name,
+                category=FindingCategory.INTEGRITY,
+                severity=RuleSeverity.HIGH,
+                confidence=item.confidence,
+                source_session_id=item.source_session_id,
+                evidence=(item,),
+                reason=f"{item.comparison_source.label} changed activity type {item.activity_type_before} to {item.activity_type_after}.",
+                metadata={"activity_type_before": item.activity_type_before, "activity_type_after": item.activity_type_after},
+            )
+            for item in context.analysis.evidence
+            if item.evidence_kind == EvidenceKind.ACTIVITY_CHANGE
+            and item.change_type in {ActivityChangeType.TYPE_CHANGED, ActivityChangeType.COMPOUND}
+            and item.activity_type_before != item.activity_type_after
+            and item.comparison_source is not None
+            and item.comparison_source.is_manual
+            and item.source_session_id is not None
+        )
+
+
+class LargeAdditionRule:
+    rule_id = "SA-R009"
+    name = "Large contiguous manual addition"
+
+    def evaluate(self, context: RuleContext) -> tuple[RuleFinding, ...]:
+        findings: list[RuleFinding] = []
+        for item in context.analysis.evidence:
+            if (
+                item.seconds_delta >= context.policy.large_addition_seconds
+                and item.change_type in {ActivityChangeType.INSERTED, ActivityChangeType.EXTENDED, ActivityChangeType.COMPOUND}
+                and item.comparison_source is not None
+                and item.comparison_source.is_manual
+                and item.source_session_id
+            ):
+                confidence = _confidence_with_capture(context, item.source_session_id, item.confidence)
+                findings.append(_finding(
+                    rule_id=self.rule_id,
+                    rule_name=self.name,
+                    category=FindingCategory.INTEGRITY,
+                    severity=RuleSeverity.CRITICAL,
+                    confidence=confidence,

@@ -80,6 +80,8 @@ def evaluate_manager_decision_reversals_detailed(
         "unchanged_decision_pair_records": 0,
         "non_chronological_pair_records": 0,
         "conflicting_agent_identity_pair_records": 0,
+        "archived_session_records": 0,
+        "archived_session_counterpart_records": 0,
     }
     excluded_pairs = {
         "ambiguous_duplicate_keys": 0,
@@ -87,6 +89,7 @@ def evaluate_manager_decision_reversals_detailed(
         "unmatched_later_records": 0,
         "non_chronological_pairs": 0,
         "conflicting_agent_identity_pairs": 0,
+        "archived_session_pairs": 0,
         "non_payroll_ready_pairs": 0,
         "unsupported_status_pairs": 0,
         "unchanged_decision_pairs": 0,
@@ -147,6 +150,35 @@ def evaluate_manager_decision_reversals_detailed(
 
     valid_earlier = valid_rows(earlier)
     valid_later = valid_rows(later)
+    # Quartz uses agent_id="0" for archived sessions. If either observation
+    # is archived, exclude the whole source/session key so its active counterpart
+    # is not misreported as unmatched or as an employee identity change.
+    archived_keys = {
+        (row.source_system, row.source_session_id)
+        for row in valid_earlier + valid_later
+        if row.source_system == "quartz" and row.agent_id == "0"
+    }
+    earlier_keys = {(row.source_system, row.source_session_id) for row in valid_earlier}
+    later_keys = {(row.source_system, row.source_session_id) for row in valid_later}
+    archived_pair_keys = archived_keys & earlier_keys & later_keys
+    excluded_pairs["archived_session_pairs"] = len(archived_pair_keys)
+    excluded_pair_ids["archived_session_pairs"] = [
+        key[1] for key in sorted(archived_pair_keys)
+    ]
+
+    def active_rows(rows):
+        active = []
+        for row in rows:
+            if (row.source_system, row.source_session_id) in archived_keys:
+                reason = ("archived_session_records" if row.agent_id == "0"
+                          else "archived_session_counterpart_records")
+                excluded[reason] += 1
+            else:
+                active.append(row)
+        return active
+
+    valid_earlier = active_rows(valid_earlier)
+    valid_later = active_rows(valid_later)
     earlier_grouped: dict[tuple[str, str], list[ManagerDecisionObservation]] = {}
     later_grouped: dict[tuple[str, str], list[ManagerDecisionObservation]] = {}
     for row in valid_earlier:

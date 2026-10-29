@@ -24,6 +24,48 @@ DETECTIONS = {
 }
 
 
+@pytest.mark.parametrize("old_agent,new_agent", [
+    ("agent-1", "0"), ("0", "agent-1"), ("0", "0"),
+])
+def test_archived_pair_is_excluded_without_identity_or_unmatched_noise(old_agent, new_agent):
+    old, new = pair(4, 5)
+    old, new = replace(old, agent_id=old_agent), replace(new, agent_id=new_agent)
+    result = evaluate_manager_decision_reversals_detailed([old], [new])
+    assert result.findings == ()
+    assert result.matched_pairs_count == 0
+    assert result.excluded_pair_counts["archived_session_pairs"] == 1
+    assert result.excluded_pair_session_ids["archived_session_pairs"] == ("session-1",)
+    assert result.excluded_pair_counts["conflicting_agent_identity_pairs"] == 0
+    assert result.excluded_record_counts["unmatched_earlier_records"] == 0
+    assert result.excluded_record_counts["unmatched_later_records"] == 0
+    assert result.excluded_record_counts["archived_session_records"] == (
+        int(old_agent == "0") + int(new_agent == "0")
+    )
+
+
+def test_archive_exclusion_does_not_hide_real_identity_conflict_or_active_finding():
+    old, new = pair(4, 5)
+    old_conflict = replace(old, source_session_id="conflict")
+    new_conflict = replace(new, source_session_id="conflict", agent_id="agent-2")
+    old_archive = replace(old, source_session_id="archived")
+    new_archive = replace(new, source_session_id="archived", agent_id="0")
+    result = evaluate_manager_decision_reversals_detailed(
+        [old, old_conflict, old_archive], [new, new_conflict, new_archive],
+    )
+    assert [f.source_session_id for f in result.findings] == ["session-1"]
+    assert result.excluded_pair_counts["conflicting_agent_identity_pairs"] == 1
+    assert result.excluded_pair_counts["archived_session_pairs"] == 1
+
+
+def test_unpaired_archived_observation_is_not_reported_as_missing():
+    old, new = pair(4, 5)
+    archived = replace(old, source_session_id="archived", agent_id="0")
+    result = evaluate_manager_decision_reversals_detailed([old, archived], [new])
+    assert len(result.findings) == 1
+    assert result.excluded_record_counts["archived_session_records"] == 1
+    assert result.excluded_record_counts["unmatched_earlier_records"] == 0
+
+
 def observation(
     session_id: str,
     *,

@@ -99,6 +99,7 @@ def observation_from_session_snapshot(row: SessionSnapshotModel) -> ManagerDecis
         source_system=row.source_system,
         source_session_id=row.source_session_id,
         status_id=row.status_id,
+        supervisor_status_id=row.supervisor_status_id,
         ready_for_payroll=row.ready_for_payroll,
         observed_at=row.observed_at,
         manager_action_at=row.manager_action_at,

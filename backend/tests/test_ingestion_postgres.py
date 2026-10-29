@@ -379,7 +379,7 @@ async def _seed_qf001_pair(
                 sessions_persisted_count=5,
             ))
             for session_id, statuses in QF001_TRANSITIONS.items():
-                status_id = statuses[0] if run_id == earlier_id else statuses[1]
+                supervisor_status_id = statuses[0] if run_id == earlier_id else statuses[1]
                 observed_at = datetime(
                     2026, 8, 26, 18 if run_id == earlier_id else 19,
                     tzinfo=timezone.utc,
@@ -392,7 +392,8 @@ async def _seed_qf001_pair(
                     shift_date=date(2026, 8, 26),
                     start_at=datetime(2026, 8, 26, 8, tzinfo=timezone.utc),
                     end_at=datetime(2026, 8, 26, 16, tzinfo=timezone.utc),
-                    status_id=status_id,
+                    status_id=2,
+                    supervisor_status_id=supervisor_status_id,
                     ready_for_payroll=True,
                     manager_action_at=datetime(2026, 8, 26, 17, tzinfo=timezone.utc),
                     content_hash=canonical_hash(NormalizedLoginSession(
@@ -402,7 +403,8 @@ async def _seed_qf001_pair(
                         shift_date=date(2026, 8, 26),
                         start_at=datetime(2026, 8, 26, 8, tzinfo=timezone.utc),
                         end_at=datetime(2026, 8, 26, 16, tzinfo=timezone.utc),
-                        status_id=status_id,
+                        status_id=2,
+                        supervisor_status_id=supervisor_status_id,
                         ready_for_payroll=True,
                         manager_action_at=datetime(2026, 8, 26, 17, tzinfo=timezone.utc),
                         metadata={},

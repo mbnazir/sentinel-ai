@@ -26,6 +26,8 @@ class ManagerDecisionObservation:
     shift_date: date | str
     content_hash: str
     content_hash_verified: bool = True
+    # Quartz stores manager decisions in this workflow column, not status_id.
+    supervisor_status_id: int | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -201,18 +203,18 @@ def evaluate_manager_decision_reversals_detailed(
             excluded_pairs["non_payroll_ready_pairs"] += 1
             excluded_pair_ids["non_payroll_ready_pairs"].append(key[1])
             continue
-        if old.status_id not in (4, 5) or new.status_id not in (4, 5):
+        if old.supervisor_status_id not in (4, 5) or new.supervisor_status_id not in (4, 5):
             excluded["unsupported_status_pair_records"] += 2
             excluded_pairs["unsupported_status_pairs"] += 1
             excluded_pair_ids["unsupported_status_pairs"].append(key[1])
             continue
-        if old.status_id == new.status_id:
+        if old.supervisor_status_id == new.supervisor_status_id:
             excluded["unchanged_decision_pair_records"] += 2
             excluded_pairs["unchanged_decision_pairs"] += 1
             excluded_pair_ids["unchanged_decision_pairs"].append(key[1])
             continue
 
-        transition = f"{old.status_id}->{new.status_id}"
+        transition = f"{old.supervisor_status_id}->{new.supervisor_status_id}"
         identity = [
             "QF-001", old.source_system, old.source_session_id,
             selected_earlier, selected_later,
@@ -221,7 +223,8 @@ def evaluate_manager_decision_reversals_detailed(
             json.dumps(identity, separators=(",", ":")).encode("utf-8")
         ).hexdigest()
         description = (
-            f"Manager decision changed from {old.status_id} to {new.status_id} between "
+            f"Manager decision changed from {old.supervisor_status_id} "
+            f"to {new.supervisor_status_id} between "
             "two payroll-ready historical observations. This is a historical observation "
             "anomaly for human review; it does not establish unauthorized access, payroll "
             "finalization, or fraud."
@@ -239,6 +242,7 @@ def evaluate_manager_decision_reversals_detailed(
                 "finding_key": finding_key,
                 "source_system": old.source_system,
                 "transition": transition,
+                "decision_field": "supervisor_status_id",
                 "classification": "HISTORICAL_OBSERVATION_ANOMALY",
                 "observation": "Manager decision status changed between selected snapshots.",
                 "interpretation": "Workflow anomaly requiring human review.",
@@ -253,6 +257,7 @@ def evaluate_manager_decision_reversals_detailed(
                     "manager_action_at": _utc(old.manager_action_at).isoformat()
                     if old.manager_action_at else None,
                     "status_id": old.status_id,
+                    "supervisor_status_id": old.supervisor_status_id,
                     "agent_id": old.agent_id,
                     "shift_date": old.shift_date.isoformat()
                     if isinstance(old.shift_date, date) else old.shift_date,
@@ -265,6 +270,7 @@ def evaluate_manager_decision_reversals_detailed(
                     "manager_action_at": _utc(new.manager_action_at).isoformat()
                     if new.manager_action_at else None,
                     "status_id": new.status_id,
+                    "supervisor_status_id": new.supervisor_status_id,
                     "agent_id": new.agent_id,
                     "shift_date": new.shift_date.isoformat()
                     if isinstance(new.shift_date, date) else new.shift_date,

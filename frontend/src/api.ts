@@ -27,9 +27,32 @@ export type ScanRow = {
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const token = sessionStorage.getItem("sentinel_access_token");
-  const r = await fetch(path, { headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}), ...(init?.headers || {}) }, ...init });
-  if (!r.ok) throw new Error(`${r.status} ${await r.text()}`);
-  return r.json();
+  const headers = new Headers(init?.headers);
+  headers.set("Content-Type", "application/json");
+  if (token) headers.set("Authorization", `Bearer ${token}`);
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 20000);
+  try {
+    const r = await fetch(path, { ...init, headers, signal: controller.signal });
+    if (r.status === 401) {
+      sessionStorage.removeItem("sentinel_access_token");
+      window.dispatchEvent(new Event("sentinel:unauthorized"));
+      throw new Error("Your session expired or the token is invalid. Enter a fresh token.");
+    }
+    if (!r.ok) {
+      if (r.status === 502 || r.status === 503 || r.status === 504) {
+        throw new Error(`API unavailable (HTTP ${r.status}). Check the API and frontend containers, then retry.`);
+      }
+      throw new Error(`HTTP ${r.status}: ${await r.text()}`);
+    }
+    return await r.json();
+  } catch (error) {
+    if (controller.signal.aborted) throw new Error("The API request timed out. Please retry.");
+    if (error instanceof TypeError) throw new Error("Cannot reach the API. Check connectivity, then retry.");
+    throw error;
+  } finally {
+    clearTimeout(timeout);
+  }
 }
 
 export const api = {
@@ -40,6 +63,7 @@ export const api = {
   scans: () => request<ScanRow[]>("/api/v1/dashboard/scans"),
   caseDetail: (id: string) => request<CaseRow>(`/api/v1/investigations/${id}`),
   caseAudit: (id: string) => request<any[]>(`/api/v1/investigations/${id}/audit`),
+  caseFindings: (id: string) => request<any[]>(`/api/v1/investigations/${id}/findings`),
   updateCase: (id: string, body: object) => request<CaseRow>(`/api/v1/investigations/${id}`, { method: "PATCH", body: JSON.stringify(body) }),
   aiSummary: (id: string) => request<any>(`/api/v1/ai/investigations/${id}/summary`),
   generateAiSummary: (id: string) => request<any>(`/api/v1/ai/investigations/${id}/summary`, { method: "POST" })

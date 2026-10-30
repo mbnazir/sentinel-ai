@@ -7,7 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.auth import Principal, current_principal
 from app.core.database import get_db
-from app.infrastructure.models import AnalysisScanModel, DurableFindingModel, InvestigationAuditEventModel, InvestigationCaseModel
+from app.infrastructure.models import AnalysisScanModel, CaseFindingModel, DurableFindingModel, InvestigationAuditEventModel, InvestigationCaseModel
 from app.investigations.models import AuditEvent, CaseCreate, CaseUpdate, DurableFinding, InvestigationCase, ScanCreate, ScanRecord
 from app.investigations.service import create_case, create_scan, update_case
 from app.workers.celery_app import celery_app
@@ -80,7 +80,11 @@ async def get_scan_findings(scan_id: UUID, db: AsyncSession = Depends(get_db)) -
 
 
 @router.post("/investigations", response_model=InvestigationCase, status_code=201)
-async def post_case(payload: CaseCreate, db: AsyncSession = Depends(get_db)) -> InvestigationCase:
+async def post_case(
+    payload: CaseCreate, db: AsyncSession = Depends(get_db),
+    principal: Principal = Depends(current_principal),
+) -> InvestigationCase:
+    payload = payload.model_copy(update={"created_by": principal.subject})
     try:
         return InvestigationCase.model_validate(await create_case(db, payload))
     except ValueError as exc:
@@ -88,7 +92,11 @@ async def post_case(payload: CaseCreate, db: AsyncSession = Depends(get_db)) -> 
 
 
 @router.patch("/investigations/{case_id}", response_model=InvestigationCase)
-async def patch_case(case_id: UUID, payload: CaseUpdate, db: AsyncSession = Depends(get_db)) -> InvestigationCase:
+async def patch_case(
+    case_id: UUID, payload: CaseUpdate, db: AsyncSession = Depends(get_db),
+    principal: Principal = Depends(current_principal),
+) -> InvestigationCase:
+    payload = payload.model_copy(update={"actor": principal.subject})
     try:
         return InvestigationCase.model_validate(await update_case(db, case_id, payload))
     except LookupError as exc:
@@ -113,3 +121,18 @@ async def get_case_audit(case_id: UUID, db: AsyncSession = Depends(get_db)) -> l
         .order_by(InvestigationAuditEventModel.created_at.asc())
     )
     return [AuditEvent.model_validate(item) for item in result.scalars().all()]
+
+
+@router.get("/investigations/{case_id}/findings", response_model=list[DurableFinding])
+async def get_case_findings(
+    case_id: UUID, db: AsyncSession = Depends(get_db),
+) -> list[DurableFinding]:
+    if await db.get(InvestigationCaseModel, case_id) is None:
+        raise HTTPException(status_code=404, detail="case not found")
+    result = await db.execute(
+        select(DurableFindingModel)
+        .join(CaseFindingModel, CaseFindingModel.finding_id == DurableFindingModel.id)
+        .where(CaseFindingModel.case_id == case_id)
+        .order_by(DurableFindingModel.source_session_id, DurableFindingModel.id)
+    )
+    return [DurableFinding.model_validate(item) for item in result.scalars().all()]

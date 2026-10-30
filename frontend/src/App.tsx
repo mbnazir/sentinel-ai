@@ -1,6 +1,7 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { NavLink, Route, Routes, useNavigate, useParams } from "react-router-dom";
 import { api, CaseRow, Finding, Overview, ScanRow } from "./api";
+import { HistoricalDecisionEvidence } from "./HistoricalDecisionEvidence";
 
 const severityClass = (s: string) => `badge ${s.toLowerCase()}`;
 
@@ -119,6 +120,7 @@ function FindingDetail() {
       </section>
       <section className="panel"><h2>Chain of Custody</h2><dl><dt>Scan</dt><dd className="mono">{d.scan_id}</dd><dt>Evidence Hash</dt><dd className="mono hash">{d.immutable_hash}</dd><dt>Rule</dt><dd>{d.evidence?.rule_name||d.rule_id}</dd><dt>Category</dt><dd>{d.evidence?.category||"—"}</dd></dl></section>
     </div>
+    <HistoricalDecisionEvidence finding={d}/>
     <section className="panel"><div className="panel-title"><h2>Evidence</h2><span>{evidence.length} item(s)</span></div>
       {evidence.length ? <div className="evidence-list">{evidence.map((e:any,i:number)=><article key={i}><header><strong>{e.evidence_kind||"evidence"}</strong><span>{e.change_type||""}</span></header><p>{e.description}</p><div className="evidence-meta"><span>{e.baseline_source||"—"} → {e.comparison_source||"—"}</span><span>Δ {e.seconds_delta ?? 0}s</span><span>confidence {Math.round((e.confidence||0)*100)}%</span></div></article>)}</div> : <Empty text="This finding contains structured metadata but no attached activity evidence objects."/>}
     </section>
@@ -138,20 +140,58 @@ function CasesPage() {
 
 function CaseDetail() {
   const {id}=useParams(); const [c,setC]=useState<CaseRow|null>(null); const [audit,setAudit]=useState<any[]>([]); const [note,setNote]=useState(""); const [ai,setAi]=useState<any>(null); const [aiBusy,setAiBusy]=useState(false);
-  const load=()=>{ if(id){api.caseDetail(id).then(setC);api.caseAudit(id).then(setAudit);api.aiSummary(id).then(setAi).catch(()=>setAi(null))} };
-  useEffect(load,[id]);
-  if(!c) return <Loading/>;
-  const update=async(status:string)=>{if(!id)return; await api.updateCase(id,{status,actor:"investigator.ui",note:note||undefined});setNote("");load()};
-  const generate=async()=>{if(!id)return;setAiBusy(true);try{setAi(await api.generateAiSummary(id))}finally{setAiBusy(false)}};
+  const [error,setError]=useState("");
+  const [busy,setBusy]=useState(false);
+  const updating=useRef(false);
+  const [linkedFindings,setLinkedFindings]=useState<any[]>([]);
+  const load=async()=>{
+    if(!id)return;
+    setError("");
+    try {
+      const [detail,history,findings]=await Promise.all([api.caseDetail(id),api.caseAudit(id),api.caseFindings(id)]);
+      setC(detail);setAudit(history);setLinkedFindings(findings);
+      api.aiSummary(id).then(setAi).catch(()=>setAi(null));
+    } catch(e) {setError(e instanceof Error ? e.message : "Could not load this case.")}
+  };
+  useEffect(()=>{setC(null);setAudit([]);setAi(null);setLinkedFindings([]);void load()},[id]);
+  if(!c) return error ? <div role="alert"><ErrorBox text={error}/><button onClick={()=>void load()}>Retry loading case</button></div> : <Loading/>;
+  const update=async(status:string)=>{
+    if(!id || updating.current)return;
+    updating.current=true;
+    setBusy(true);setError("");
+    try {await api.updateCase(id,{status,note:note||undefined});setNote("");await load()}
+    catch(e){setError(e instanceof Error ? e.message : "Could not update this case.")}
+    finally{updating.current=false;setBusy(false)}
+  };
+  const generate=async()=>{
+    if(!id)return;setAiBusy(true);setError("");
+    try{setAi(await api.generateAiSummary(id))}
+    catch(e){setError(e instanceof Error ? e.message : "Could not generate the brief.")}
+    finally{setAiBusy(false)}
+  };
   return <>
     <PageHead title={c.case_number} sub={c.title}/>
+    {error && <div role="alert"><ErrorBox text={error}/><button onClick={()=>void load()}>Reload case</button></div>}
     <div className="detail-grid">
       <section className="panel"><h2>Case Workflow</h2><dl><dt>Status</dt><dd>{c.status}</dd><dt>Disposition</dt><dd>{c.disposition}</dd><dt>Assigned To</dt><dd>{c.assigned_to||"Unassigned"}</dd><dt>Created By</dt><dd>{c.created_by}</dd></dl>
-        <textarea placeholder="Reviewer note…" value={note} onChange={e=>setNote(e.target.value)}/>
-        <div className="actions">{c.status==="open"&&<button onClick={()=>update("in_review")}>Start Review</button>}{c.status==="in_review"&&<><button onClick={()=>update("awaiting_info")}>Request Information</button><button onClick={()=>update("resolved")}>Resolve</button></>}{c.status==="awaiting_info"&&<button onClick={()=>update("in_review")}>Resume Review</button>}{c.status==="resolved"&&<button onClick={()=>update("closed")}>Close Case</button>}</div>
+        <textarea aria-label="Reviewer note" disabled={busy} placeholder="Reviewer note…" value={note} onChange={e=>setNote(e.target.value)}/>
+        <div className="actions" aria-busy={busy}>{c.status==="open"&&<button disabled={busy} onClick={()=>update("in_review")}>Start Review</button>}{c.status==="in_review"&&<><button disabled={busy} onClick={()=>update("awaiting_info")}>Request Information</button><button disabled={busy} onClick={()=>update("resolved")}>Resolve</button></>}{c.status==="awaiting_info"&&<button disabled={busy} onClick={()=>update("in_review")}>Resume Review</button>}{c.status==="resolved"&&<button disabled={busy} onClick={()=>update("closed")}>Close Case</button>}</div>
       </section>
-      <section className="panel"><div className="panel-title"><h2>Audit History</h2><span>{audit.length} events</span></div><div className="audit">{audit.map((a,i)=><div key={a.id||i}><b>{a.event_type}</b><span>{a.actor}</span><small>{new Date(a.created_at).toLocaleString()}</small><p>{a.event_json?.note||""}</p></div>)}</div></section>
+      <section className="panel"><div className="panel-title"><h2>Audit History</h2><span>{audit.length} events</span></div><div className="audit">{audit.map((a,i)=><div key={a.id||i}><b>{a.event_type}</b><span>{a.actor}</span><small>{new Date(a.created_at).toLocaleString()}</small>{a.event_json?.before && a.event_json?.after && <p>{a.event_json.before.status} → {a.event_json.after.status}</p>}<p>{a.event_json?.note||""}</p></div>)}</div></section>
     </div>
+    <section className="panel"><div className="panel-title"><h2>Linked Findings</h2><span>{linkedFindings.length} finding(s)</span></div>
+      {!linkedFindings.length && <Empty text="No findings are linked to this case."/>}
+      {linkedFindings.map(f=><article className="linked-finding" key={f.id}>
+        <h3><NavLink to={`/findings/${f.id}`}>{f.rule_id} · Session {f.source_session_id || "Not recorded"}</NavLink></h3>
+        <p>{f.reason}</p>
+        <HistoricalDecisionEvidence finding={f}/>
+        <details><summary>Finding provenance</summary><dl>
+          <dt>Finding ID</dt><dd className="mono hash">{f.id}</dd>
+          <dt>Scan ID</dt><dd className="mono hash">{f.scan_id}</dd>
+          <dt>Immutable finding hash</dt><dd className="mono hash">{f.immutable_hash}</dd>
+        </dl></details>
+      </article>)}
+    </section>
     <section className="panel"><div className="panel-title"><h2>AI Investigator Brief</h2><span>{ai ? `${ai.provider} · ${ai.model}` : "Evidence-grounded summary"}</span></div>
       <button onClick={generate} disabled={aiBusy}>{aiBusy ? "Generating…" : ai ? "Regenerate Brief" : "Generate Investigator Brief"}</button>
       {ai ? <div className="ai-brief"><pre>{ai.narrative}</pre><small>Prompt {ai.prompt_version} · Evidence input hash {ai.input_hash}</small></div> : <p className="muted">No AI brief has been generated. The AI layer summarizes existing findings only; it does not create or alter fraud evidence.</p>}
@@ -177,7 +217,13 @@ function Empty({text}:{text:string}){return <div className="empty">{text}</div>}
 export default function App() {
   const [token,setToken]=useState(()=>sessionStorage.getItem("sentinel_access_token")||"");
   const [draft,setDraft]=useState("");
-  if(!token) return <div className="auth-screen"><div className="auth-card"><div className="mark">S</div><h1>Sentinel AI</h1><p>Paste an enterprise access token or a locally generated development token.</p><textarea value={draft} onChange={e=>setDraft(e.target.value)} placeholder="Bearer token value"/><button onClick={()=>{const v=draft.trim();if(v){sessionStorage.setItem("sentinel_access_token",v);setToken(v)}}}>Continue</button><small>Sentinel does not provide password authentication. Production identity should come from enterprise SSO/OIDC.</small></div></div>;
+  const [authError,setAuthError]=useState("");
+  useEffect(()=>{
+    const expired=()=>{setToken("");setDraft("");setAuthError("Your session expired or the token is invalid. Enter a fresh token.")};
+    window.addEventListener("sentinel:unauthorized",expired);
+    return ()=>window.removeEventListener("sentinel:unauthorized",expired);
+  },[]);
+  if(!token) return <div className="auth-screen"><div className="auth-card"><div className="mark">S</div><h1>Sentinel AI</h1><p>Paste an enterprise access token or a locally generated development token.</p>{authError && <div role="alert"><ErrorBox text={authError}/></div>}<textarea value={draft} onChange={e=>setDraft(e.target.value)} placeholder="Bearer token value"/><button onClick={()=>{const v=draft.trim().replace(/^Bearer\s+/i, "");if(v){setAuthError("");sessionStorage.setItem("sentinel_access_token",v);setToken(v)}}}>Continue</button><small>Sentinel does not provide password authentication. Production identity should come from enterprise SSO/OIDC.</small></div></div>;
   return <Shell><Routes>
     <Route path="/" element={<OverviewPage/>}/>
     <Route path="/findings" element={<FindingsPage/>}/>

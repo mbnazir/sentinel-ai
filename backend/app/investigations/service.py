@@ -202,7 +202,10 @@ async def create_case(db: AsyncSession, payload: CaseCreate) -> InvestigationCas
 
 
 async def update_case(db: AsyncSession, case_id: UUID, payload: CaseUpdate) -> InvestigationCaseModel:
-    case = await db.get(InvestigationCaseModel, case_id)
+    # Serialize updates and refresh even if this session already loaded the case.
+    case = await db.get(
+        InvestigationCaseModel, case_id, with_for_update=True, populate_existing=True,
+    )
     if case is None:
         raise LookupError("case not found")
     before = {"status": case.status, "disposition": case.disposition, "assigned_to": case.assigned_to}
@@ -217,12 +220,17 @@ async def update_case(db: AsyncSession, case_id: UUID, payload: CaseUpdate) -> I
         case.disposition = payload.disposition.value
     if payload.assigned_to is not None:
         case.assigned_to = payload.assigned_to
+    after = {"status": case.status, "disposition": case.disposition,
+             "assigned_to": case.assigned_to}
+    if before == after and not (payload.note or "").strip():
+        # A repeated click without a change or note is not a new audit event.
+        return case
     case.updated_at = datetime.now(timezone.utc)
     db.add(InvestigationAuditEventModel(
         id=uuid4(), case_id=case.id, actor=payload.actor, event_type="case_updated",
         event_json={
             "before": before,
-            "after": {"status": case.status, "disposition": case.disposition, "assigned_to": case.assigned_to},
+            "after": after,
             "note": payload.note,
         },
     ))

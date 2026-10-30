@@ -94,7 +94,8 @@ class CaseUpdate(BaseModel):
     disposition: CaseDisposition | None = None
     assigned_to: str | None = None
     note: str | None = None
-    actor: str
+    # HTTP routes always use the authenticated principal; retained for internal callers.
+    actor: str = ""
 
 
 class InvestigationCase(BaseModel):
